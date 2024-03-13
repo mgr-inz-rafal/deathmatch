@@ -117,16 +117,4 @@ struct Response {
 }
 
 #[cfg(test)]
-mod tests {
-
-    use crate::{Command, Direction, Encode, Request};
-
-    #[test]
-    fn xxx() {
-        let r = Request {
-            command: Command::Move(Direction::Right),
-        };
-
-        println!("{:?}", r.encode());
-    }
-}
+mod tests {}
