@@ -18,13 +18,10 @@ impl codec::Decoder for RequestCodec {
     type Error = std::io::Error;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        let len = src.len();
-        for i in 0..len {
+        for i in 0..src.len() {
             if src[i] == PACKET_END {
-                // We have full frame.
-                let data = &src[0..i];
-                let x = BASE64_STANDARD.decode(data).unwrap();
-                let des: Self::Item = bincode::deserialize(&x).unwrap();
+                let des =
+                    bincode::deserialize(&BASE64_STANDARD.decode(&src[0..i]).unwrap()).unwrap();
                 src.advance(i + 1);
                 return Ok(Some(des));
             }

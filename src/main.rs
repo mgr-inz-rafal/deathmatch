@@ -18,6 +18,7 @@ async fn run_server() {
             while let Some(request) = requests.next().await {
                 println!("got request from {remote_addr}: {}", request.unwrap());
             }
+            println!("Connection to {remote_addr} closed");
         });
     }
 }
