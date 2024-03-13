@@ -1,11 +1,14 @@
-use tokio::{io::AsyncWriteExt, net::TcpSocket};
-use types::Encode;
+use std::net::SocketAddr;
+
+use futures::sink::SinkExt;
+use tokio::net::TcpStream;
+use tokio_util::codec::Framed;
+use types::RequestCodec;
 
 #[tokio::main]
 async fn main() {
-    let addr = "127.0.0.1:8080".parse().unwrap();
-    let socket = TcpSocket::new_v4().unwrap();
-    let mut stream = socket.connect(addr).await.unwrap();
+    let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+    let mut framed_stream = Framed::new(TcpStream::connect(addr).await.unwrap(), RequestCodec {});
     println!("Connected to server");
 
     loop {
@@ -24,9 +27,9 @@ async fn main() {
                 'Q' | 'q' => (types::Request::quit(), true),
                 _ => panic!("unknown request ({})", c as u8),
             };
-            let encoded = request.encode();
-            stream.write_all(&encoded).await.unwrap();
-            println!("Request sent: {}", request);
+            let request_desc = request.to_string();
+            framed_stream.send(request).await.unwrap();
+            println!("Request sent: {}", request_desc);
             if should_quit {
                 println!("bye bye...");
                 return;
