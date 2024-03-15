@@ -1,6 +1,7 @@
-use tokio::io::AsyncReadExt;
+use futures::{StreamExt, TryStreamExt};
 use tokio::net::TcpListener;
-use types::{Decode, Request};
+use tokio_util::codec::Framed;
+use types::RequestCodec;
 
 async fn run_server() {
     let addr = "127.0.0.1:8080";
@@ -8,24 +9,16 @@ async fn run_server() {
     println!("Listening on: {}", addr);
 
     loop {
-        let (mut socket, remote_addr) = listener.accept().await.unwrap();
+        let (socket, remote_addr) = listener.accept().await.unwrap();
         println!("Connection from {remote_addr} established");
+
+        let framed = Framed::new(socket, RequestCodec {});
         tokio::spawn(async move {
-            let mut message = vec![];
-            let mut byte = [0_u8];
-            loop {
-                if 0 == socket.read(&mut byte).await.unwrap() {
-                    println!("Connection from {remote_addr} closed");
-                    break;
-                } else if byte[0] == types::PACKET_END {
-                    // Entire message read
-                    let request = Request::decode(&message);
-                    println!("got request from {remote_addr}: {request}");
-                    message.clear();
-                } else {
-                    message.push(byte[0])
-                }
+            let mut requests = framed.into_stream();
+            while let Some(request) = requests.next().await {
+                println!("got request from {remote_addr}: {}", request.unwrap());
             }
+            println!("Connection to {remote_addr} closed");
         });
     }
 }

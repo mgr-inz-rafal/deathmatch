@@ -1,33 +1,48 @@
 use core::fmt;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+
+use tokio_util::{
+    bytes::{self, Buf},
+    codec,
+};
 
 pub const PACKET_END: u8 = 0;
-pub trait Encode {
-    fn encode(&self) -> Vec<u8>
-    where
-        Self: Serialize,
-    {
-        let ser = bincode::serialize(&self).unwrap();
-        BASE64_STANDARD
-            .encode(ser)
-            .as_bytes()
-            .iter()
-            .chain(std::iter::once(&PACKET_END))
-            .copied()
-            .collect()
+
+pub struct RequestCodec {}
+
+impl codec::Decoder for RequestCodec {
+    type Item = Request;
+
+    type Error = std::io::Error;
+
+    fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        for i in 0..src.len() {
+            if src[i] == PACKET_END {
+                let des =
+                    bincode::deserialize(&BASE64_STANDARD.decode(&src[0..i]).unwrap()).unwrap();
+                src.advance(i + 1);
+                return Ok(Some(des));
+            }
+        }
+        Ok(None)
     }
 }
 
-pub trait Decode<T>
-where
-    T: DeserializeOwned,
-{
-    fn decode(bytes: &[u8]) -> T {
-        let x = BASE64_STANDARD.decode(bytes).unwrap();
-        let des: T = bincode::deserialize(&x).unwrap();
-        des
+impl codec::Encoder<Request> for RequestCodec {
+    type Error = std::io::Error;
+
+    fn encode(&mut self, item: Request, dst: &mut bytes::BytesMut) -> Result<(), Self::Error> {
+        let ser = bincode::serialize(&item).unwrap();
+        dst.extend(
+            BASE64_STANDARD
+                .encode(ser)
+                .as_bytes()
+                .iter()
+                .chain(std::iter::once(&PACKET_END)),
+        );
+        Ok(())
     }
 }
 
@@ -38,9 +53,6 @@ enum Direction {
     Up,
     Down,
 }
-
-impl Encode for Direction {}
-impl Decode<Direction> for Direction {}
 
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -59,9 +71,6 @@ enum Command {
     Move(Direction),
 }
 
-impl Encode for Command {}
-impl Decode<Command> for Command {}
-
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -75,9 +84,6 @@ impl fmt::Display for Command {
 pub struct Request {
     command: Command,
 }
-
-impl Encode for Request {}
-impl Decode<Request> for Request {}
 
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
