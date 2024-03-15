@@ -31,13 +31,11 @@ async fn run_server(bind_addr: &str, max_conn: u8) {
         );
         let (socket, remote_addr) = listener.accept().await.unwrap();
         println!("Connection from {remote_addr} established");
-        let permit = match semaphore.clone().try_acquire_owned() {
-            Ok(permit) => permit,
-            Err(_) => {
-                println!("No more connection slots available, sorry");
-                drop(socket);
-                continue;
-            }
+
+        let Ok(permit) = semaphore.clone().try_acquire_owned() else {
+            println!("No more connection slots available, sorry");
+            drop(socket);
+            continue;
         };
 
         let framed = Framed::new(socket, RequestCodec {});
