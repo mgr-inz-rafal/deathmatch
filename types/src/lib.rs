@@ -69,6 +69,7 @@ impl fmt::Display for Direction {
 enum Command {
     Quit,
     Move(Direction),
+    Bytes(Vec<u8>),
 }
 
 impl fmt::Display for Command {
@@ -76,6 +77,7 @@ impl fmt::Display for Command {
         match self {
             Command::Quit => write!(f, "Quit"),
             Command::Move(direction) => write!(f, "Move({})", direction),
+            Command::Bytes(bytes) => write!(f, "Bytes({})", bytes.len()),
         }
     }
 }
@@ -107,6 +109,12 @@ impl Request {
     pub fn quit() -> Self {
         Self {
             command: Command::Quit,
+        }
+    }
+
+    pub fn bytes(i: impl Iterator<Item = u8>) -> Self {
+        Self {
+            command: Command::Bytes(i.collect()),
         }
     }
 }
