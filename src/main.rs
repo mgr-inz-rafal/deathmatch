@@ -1,12 +1,19 @@
+use clap::Parser;
 use futures::{StreamExt, TryStreamExt};
 use tokio::net::TcpListener;
 use tokio_util::codec::Framed;
 use types::RequestCodec;
 
-async fn run_server() {
-    let addr = "127.0.0.1:8080";
-    let listener = TcpListener::bind(&addr).await.unwrap();
-    println!("Listening on: {}", addr);
+#[derive(Parser)]
+struct Args {
+    /// Server bind address.
+    #[arg(short, long)]
+    bind_addr: String,
+}
+
+async fn run_server(bind_addr: &str) {
+    let listener = TcpListener::bind(bind_addr).await.unwrap();
+    println!("Listening on: {}", bind_addr);
 
     loop {
         let (socket, remote_addr) = listener.accept().await.unwrap();
@@ -25,7 +32,9 @@ async fn run_server() {
 
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
+
     println!("Server running...");
-    run_server().await;
+    run_server(&args.bind_addr).await;
     println!("Server stopped");
 }

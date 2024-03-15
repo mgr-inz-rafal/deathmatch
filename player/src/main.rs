@@ -1,18 +1,34 @@
 use std::net::SocketAddr;
 
+use clap::Parser;
 use futures::sink::SinkExt;
 use rand::Rng;
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use types::{Request, RequestCodec};
 
+#[derive(Parser)]
+struct Args {
+    /// Server address.
+    #[arg(short, long)]
+    addr: String,
+}
+
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
     let mut rng = rand::thread_rng();
 
-    let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+    let addr: SocketAddr = match args.addr.parse() {
+        Ok(addr) => addr,
+        Err(err) => {
+            println!("{err}");
+            return;
+        }
+    };
+    println!("Connecting to {addr}...");
     let mut framed_stream = Framed::new(TcpStream::connect(addr).await.unwrap(), RequestCodec {});
-    println!("Connected to server");
+    println!("Connected!");
 
     loop {
         println!("Which request?");
