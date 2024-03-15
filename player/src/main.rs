@@ -4,7 +4,7 @@ use futures::sink::SinkExt;
 use rand::Rng;
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use types::RequestCodec;
+use types::{Request, RequestCodec};
 
 #[tokio::main]
 async fn main() {
@@ -26,13 +26,13 @@ async fn main() {
 
         for c in input.trim_end().chars() {
             let (request, should_quit) = match c {
-                'L' | 'l' => (types::Request::left(), false),
-                'R' | 'r' => (types::Request::right(), false),
-                'Q' | 'q' => (types::Request::quit(), true),
+                'L' | 'l' => (Request::left(), false),
+                'R' | 'r' => (Request::right(), false),
+                'Q' | 'q' => (Request::quit(), true),
                 'B' | 'b' => {
                     let count = rng.gen_range(0..1024 * 1024 * 4);
                     (
-                        types::Request::bytes(std::iter::repeat_with(|| rng.gen()).take(count)),
+                        Request::bytes(std::iter::repeat_with(|| rng.gen()).take(count)),
                         false,
                     )
                 }
